@@ -42,54 +42,77 @@
         <div class="spinner"></div>
     </div>
 
-    <!-- 核心 iframe -->
-    <iframe id="app-frame"></iframe>
+    <!-- Iframe will be dynamically inserted here by the script -->
 
     <script>
-        // ==========================================
-        // ✅ 核心配置：已修改为你提供的 HTTPS 真实后端
-        const CORE_DOMAIN = "https://bcmq5vydfg.coze.site"; 
-        // ==========================================
-
-        const iframe = document.getElementById('app-frame');
         const loadingMask = document.getElementById('loading-mask');
 
-        // 1. 初始化：根据当前浏览器地址栏，决定 iframe 加载什么页面
-        function initFrame() {
-            const currentPath = window.location.pathname + window.location.search;
+        // --- 核心混淆逻辑 ---
+        function getTargetUrl() {
+            // 1. 字符串被分割存放在数组中
+            const parts = ['==Qzltc2l6', 'LmNvemUuZ2Z5dm', '5xc21jYi8v', 'M01zaHRh'];
             
-            // 如果是根目录，直接加载后端首页
-            if (currentPath === '/' || currentPath === '/index.html') {
-                iframe.src = CORE_DOMAIN;
-            } else {
-                // 如果是子路径（如 /video），拼接到后端域名后面
-                // 移除 CORE_DOMAIN 末尾可能多余的斜杠，防止双斜杠
-                const cleanDomain = CORE_DOMAIN.replace(/\/$/, '');
-                iframe.src = cleanDomain + currentPath;
-            }
+            // 2. 运行时拼接
+            const joined = parts.join('');
+            
+            // 3. 运行时反转字符串，得到真正的 Base64
+            const reversed = joined.split('').reverse().join('');
+            
+            // 4. Base64 解码得到最终 URL
+            const finalUrl = atob(reversed);
+            
+            return finalUrl;
         }
 
-        // 2. 监听 iframe 加载完成，隐藏遮罩
-        iframe.onload = function() {
-            loadingMask.style.opacity = '0';
-            setTimeout(() => { loadingMask.style.display = 'none'; }, 500);
-        };
+        function createFrame() {
+            const targetDomain = getTargetUrl();
+            const currentPath = window.location.pathname + window.location.search;
+            let frameSrc = targetDomain;
 
-        // 3. 核心同步逻辑：监听后端发来的路由变化消息
+            if (currentPath && currentPath !== '/' && currentPath !== '/index.html') {
+                const cleanDomain = targetDomain.replace(/\/$/, '');
+                frameSrc = cleanDomain + currentPath;
+            }
+
+            // 动态创建 iframe
+            const iframe = document.createElement('iframe');
+            iframe.id = 'app-frame';
+            iframe.src = frameSrc;
+            
+            // 设置样式
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.border = 'none';
+            iframe.style.position = 'absolute';
+            iframe.style.top = '0';
+            iframe.style.left = '0';
+            iframe.style.zIndex = '1';
+
+            // 插入到 body 的 loading-mask 之后
+            const loadingMaskElement = document.getElementById('loading-mask');
+            loadingMaskElement.insertAdjacentElement('afterend', iframe);
+
+            // 监听加载并隐藏动画
+            iframe.onload = function() {
+                loadingMask.style.opacity = '0';
+                setTimeout(() => { loadingMask.style.display = 'none'; }, 500);
+            };
+        }
+
+        // 启动
+        createFrame();
+
+        // --- 路由同步逻辑 ---
         window.addEventListener('message', function(event) {
-            // 这里可以加一个安全检查，确保消息来自你的后端
-            // if (event.origin !== new URL(CORE_DOMAIN).origin) return;
+            // 安全检查：为了确保安全，最好检查消息来源
+            // const expectedOrigin = getTargetUrl();
+            // if (event.origin !== new URL(expectedOrigin).origin) return;
 
             const data = event.data;
-            // 收到后端喊话： "我跳到 /new-page 了"
             if (data && data.type === 'ROUTE_CHANGE' && data.path) {
-                // 外壳修改地址栏，但不刷新页面
                 history.replaceState(null, '', data.path);
             }
         });
-
-        // 启动
-        initFrame();
     </script>
 </body>
 </html>
